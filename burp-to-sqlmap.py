@@ -133,6 +133,10 @@ def runLinux(filename, directory, sqlmappath, proxyvalue, vulnerablefiles):
 
     print " [+] Testing SQL Injection on packets ...  (Based on your network connection Test can take up to 5 minutes.)"
     for file in os.listdir(directory):
+        #The following few lines solves an issue with the character encoding.
+        #Burp in Kali exports the HTTP history as UTF-16LE which was resulting
+        #in the individual request files not being read successfully by sqlmap
+        #There is probably a cleaner way to do this.
         cmd = "iconv -f utf-16le -t ascii %s > %s_ascii" % (os.path.dirname(os.path.realpath(__file__)) + "/" + directory + "/" + file,os.path.dirname(os.path.realpath(__file__)) + "/" + directory + "/" + file)
         os.system(cmd)
         cmd = "cat %s_ascii > %s" % (os.path.dirname(os.path.realpath(__file__)) + "/" + directory + "/" + file,os.path.dirname(os.path.realpath(__file__)) + "/" + directory + "/" + file)

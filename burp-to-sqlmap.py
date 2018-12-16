@@ -74,7 +74,6 @@ def main():
         runWindows(filename, directory, sqlmappath, proxyvalue, vulnerablefiles)
     elif sys.platform.startswith("linux"):
         runLinux(filename, directory, sqlmappath, proxyvalue, vulnerablefiles)
-#        print "Args:\nfile=" + args.file + ";outputdirectory="+args.outputdirectory + ";sqlmappath="+args.sqlmappath
     else:
         print "[+] Error: Unsupported OS Detected!"
 
@@ -120,83 +119,47 @@ def runWindows(filename, directory, sqlmappath, proxyvalue, vulnerablefiles):
 def runLinux(filename, directory, sqlmappath, proxyvalue, vulnerablefiles):
     packetnumber = 0
     print " [+] Exporting Packets ..."
+    
     with open(filename, 'r') as f:
         soup = BeautifulSoup(f.read(), "html.parser")
         for i in soup.find_all("request"):
             packetnumber = packetnumber + 1
             print "   [-] Packet " + str(packetnumber) + " Exported."
             outfile = codecs.open(os.path.join(directory, str(packetnumber) + ".txt"), "w", "utf-16le")
-            outfile.write(''.join(i.text.strip().split("\x00")))
+            outfile.write(i.text.strip())
         print " "
         print str(packetnumber) + " Packets Exported Successfully."
         print " "
 
     print " [+] Testing SQL Injection on packets ...  (Based on your network connection Test can take up to 5 minutes.)"
     for file in os.listdir(directory):
-        allParams = getParamsFromRequest(os.path.dirname(os.path.realpath(__file__)) + "/" + directory + "/" + file)
-        for param in allParams:
-            if param == "SKIP_REQUEST":
-                print "[+] Skipping request file: %s! The parameters could not be identified!" % (file)
-                break
-            print "   [-] Performing SQL Injection on packet number " + file[:-4] + " Parameter: " + param +". Please Wait ..."
-            cmd = "python " + sqlmappath + "/sqlmap.py -r " + os.path.dirname(os.path.realpath(__file__)) + "/" + directory + "/" + file + " -p " + str(param) + " --batch " + proxyvalue + " > " + os.path.dirname(os.path.realpath(__file__)) + "/" + directory + "/testresult_" + param + "_" + file
-            cmd = ''.join(cmd.split('\x00'))
-            print "[-] Command used: %s" % (cmd)
-            os.system(cmd)
-            if 'is vulnerable' in open(directory + "/testresult_" + ''.join(param.split('\00')) + "_" + file).read() or "Payload:" in open(
-                    directory + "/testresult_" + ''.join(param.split('\00')) + "_" + file).read():
-                print "    - URL is Vulnerable."
-                vulnerablefiles.append(file)
-            else:
-                print "    - URL is not Vulnerable."
-            print "    - Output saved in " + directory + "/testresult" + file
-            print " "
-            print "--------------"
-            print "Test Done."
-            print "Result:"
-            if not vulnerablefiles:
-                print "No vulnerabilities found on your target."
-            else:
-                for items in vulnerablefiles:
-                     print "Packet " + items[:-4] + " is vulnerable to SQL Injection. for more information please see " + items
-            print "--------------"
-            print " "
-
-def getParamsFromRequest(file):
-    f = open(file, "r")
-    returnParams = []
-    bPostParamsOnNextLine = 0
-    bSkipRequest = 0
-    lineCount = 0
-    bIsPost = 0
-    for line in f:
-        line = ''.join(line.split('\00'))
-        lineCount = lineCount +1
-        arr = line.split(" ")
-        if ''.join(arr[0].split('\00')) == "GET":
-            print "[+] GET request found in file %s: %s" %(file, line)
-            strParams = arr[1].split("?")[1]
-            arrSepParams = strParams.split("&")
-            for item in arrSepParams:
-                returnParams.append(item.split("=")[0])
-            break
-        elif ''.join(arr[0].split('\00')) == "POST":
-            print "[+] POST request found in file %s: %s" %(file, line)
-            bIsPost = 1
-        elif len(arr[0])<5 and bIsPost == 1:
-            bPostParamsOnNextLine = 1
-        elif arr[0] ==  "Content-Type:" and arr[1].strip() != "application/x-www-form-urlencoded":
-            bSkipRequest = 1
-            returnParams[:] = []
-            returnParams.append("SKIP_REQUEST")
-            break
-        elif bIsPost == 1 and bPostParamsOnNextLine == 1:
-            if bPostParamsOnNextLine == 1:
-                 arrSepParams = line.split("&")
-                 for item in arrSepParams:
-                     returnParams.append(item.split("=")[0])
-                 break
-    return returnParams
+        cmd = "iconv -f utf-16le -t ascii %s > %s_ascii" % (os.path.dirname(os.path.realpath(__file__)) + "/" + directory + "/" + file,os.path.dirname(os.path.realpath(__file__)) + "/" + directory + "/" + file)
+        os.system(cmd)
+        cmd = "cat %s_ascii > %s" % (os.path.dirname(os.path.realpath(__file__)) + "/" + directory + "/" + file,os.path.dirname(os.path.realpath(__file__)) + "/" + directory + "/" + file)
+        os.system(cmd)
+        cmd = "rm %s_ascii" % (os.path.dirname(os.path.realpath(__file__)) + "/" + directory + "/" + file)
+        os.system(cmd)
+        print "   [-] Performing SQL Injection on packet number " + file[:-4] + ". Please Wait ..."
+        cmd = "python " + sqlmappath + "/sqlmap.py -r " + os.path.dirname(os.path.realpath(__file__)) + "/" + directory + "/" + file + " --batch " + proxyvalue + "--level 5 --risk 3 > " + os.path.dirname(os.path.realpath(__file__)) + "/" + directory + "/testresult" + "_" + file
+        os.system(cmd)
+        if 'is vulnerable' in open(directory + "/testresult" + "_" + file).read() or "Payload:" in open(
+                directory + "/testresult" + "_" + file).read():
+            print "    - URL is Vulnerable."
+            vulnerablefiles.append(file)
+        else:
+            print "    - URL is not Vulnerable."
+        print "    - Output saved in " + directory + "/testresult" + file
+        print " "
+        print "--------------"
+        print "Test Done."
+        print "Result:"
+        if not vulnerablefiles:
+            print "No vulnerabilities found on your target."
+        else:
+            for items in vulnerablefiles:
+                 print "Packet " + items[:-4] + " is vulnerable to SQL Injection. for more information please see " + items
+        print "--------------"
+        print " "
 
 
 if __name__ == "__main__":

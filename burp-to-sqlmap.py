@@ -140,7 +140,7 @@ def runLinux(filename, directory, sqlmappath, proxyvalue, vulnerablefiles):
         cmd = "rm %s_ascii" % (os.path.dirname(os.path.realpath(__file__)) + "/" + directory + "/" + file)
         os.system(cmd)
         print "   [-] Performing SQL Injection on packet number " + file[:-4] + ". Please Wait ..."
-        cmd = "python " + sqlmappath + "/sqlmap.py -r " + os.path.dirname(os.path.realpath(__file__)) + "/" + directory + "/" + file + " --batch " + proxyvalue + "--level 5 --risk 3 > " + os.path.dirname(os.path.realpath(__file__)) + "/" + directory + "/testresult" + "_" + file
+        cmd = "python " + sqlmappath + "/sqlmap.py -r " + os.path.dirname(os.path.realpath(__file__)) + "/" + directory + "/" + file + " --batch " + proxyvalue + " > " + os.path.dirname(os.path.realpath(__file__)) + "/" + directory + "/testresult" + "_" + file
         os.system(cmd)
         if 'is vulnerable' in open(directory + "/testresult" + "_" + file).read() or "Payload:" in open(
                 directory + "/testresult" + "_" + file).read():

@@ -55,7 +55,7 @@ def main():
     parser.add_argument("-R", "--risk",  default="1")
     args = parser.parse_args()
 
-    if not args.file or not args.outputdirectory or not args.sqlmappath:
+    if not args.file or not args.outputdirectory or not args.sqlmappath or ("1","2","3").count(args.risk) < 1 or ("1","2","3", "4", "5").count(args.level) < 1:
         banner()
         usage()
         sys.exit(0)

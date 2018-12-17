@@ -1,5 +1,9 @@
+#!/usr/bin/python
 try:
     import os
+    import time
+    import datetime
+    import subprocess
     from bs4 import BeautifulSoup
     import os.path
     import argparse
@@ -123,9 +127,20 @@ def runWindows(filename, directory, sqlmappath, proxyvalue, vulnerablefiles, lev
     print " "
 
 def runLinux(filename, directory, sqlmappath, proxyvalue, vulnerablefiles, level, risk):
+    dircontents = os.listdir(directory)
+    if dircontents:
+        if not os.path.exists("Archives"):
+          os.makedirs("Archives")
+        print "Archiving previous data in output directory ..."
+        cmd = "tar -cvzf Archives/" + datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d_%H-%M-%S')  + "_" + directory[:-1] + ".tar.gz " + directory
+        os.system(cmd)
+        print "Done Archiving ...\n"
+        cleanupcmd = "rm -r " + directory + " && mkdir " + directory
+        os.system(cleanupcmd)
+      
     packetnumber = 0
     print " [+] Exporting Packets ..."
-    
+        
     with open(filename, 'r') as f:
         soup = BeautifulSoup(f.read(), "html.parser")
         for i in soup.find_all("request"):

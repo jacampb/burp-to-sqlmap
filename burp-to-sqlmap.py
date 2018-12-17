@@ -36,6 +36,26 @@ def banner():
     print " #######################################################################"
     print " "
 
+def runsqlmap():
+    cmd = "sqlmap -r " + os.path.dirname(os.path.realpath(__file__)) + "/" + directory + "/" + file + " --batch " + proxyvalue + " --level " + level + " --risk " + risk + " > " + os.path.dirname(os.path.realpath(__file__)) + "/" + directory + "/testresult" + "_" + file
+    os.system(cmd)
+    return
+
+# Method to archive previous runs of the script if necessary
+def archivePreviousUnix(directory):
+    dircontents = os.listdir(directory)
+    if dircontents:
+        if not os.path.exists("Archives"):
+            os.makedirs("Archives")
+        print "Archiving previous data in output directory ..."
+        cmd = "tar -cvzf Archives/" + datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d_%H-%M-%S')  + "_" + directory[:-1] + ".tar.gz " + directory
+        os.system(cmd)
+        print "Done Archiving.\n"
+        cleanupcmd = "rm -r " + directory + " && mkdir " + directory
+        print "Cleaning up previous data ... "
+        os.system(cleanupcmd)
+        print "Done.\n"
+
 
 def usage():
     print" "
@@ -127,17 +147,9 @@ def runWindows(filename, directory, sqlmappath, proxyvalue, vulnerablefiles, lev
     print " "
 
 def runLinux(filename, directory, sqlmappath, proxyvalue, vulnerablefiles, level, risk):
-    dircontents = os.listdir(directory)
-    if dircontents:
-        if not os.path.exists("Archives"):
-          os.makedirs("Archives")
-        print "Archiving previous data in output directory ..."
-        cmd = "tar -cvzf Archives/" + datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d_%H-%M-%S')  + "_" + directory[:-1] + ".tar.gz " + directory
-        os.system(cmd)
-        print "Done Archiving ...\n"
-        cleanupcmd = "rm -r " + directory + " && mkdir " + directory
-        os.system(cleanupcmd)
-      
+    # Call method to archive if necessary
+    archivePreviousUnix(directory)
+    
     packetnumber = 0
     print " [+] Exporting Packets ..."
         
@@ -165,7 +177,7 @@ def runLinux(filename, directory, sqlmappath, proxyvalue, vulnerablefiles, level
         cmd = "rm %s_ascii" % (os.path.dirname(os.path.realpath(__file__)) + "/" + directory + "/" + file)
         os.system(cmd)
         print "   [-] Performing SQL Injection on packet number " + file[:-4] + ". Please Wait ..."
-        cmd = "python " + sqlmappath + "/sqlmap.py -r " + os.path.dirname(os.path.realpath(__file__)) + "/" + directory + "/" + file + " --batch " + proxyvalue + " --level " + level + " --risk " + risk + " > " + os.path.dirname(os.path.realpath(__file__)) + "/" + directory + "/testresult" + "_" + file
+        cmd = "sqlmap -r " + os.path.dirname(os.path.realpath(__file__)) + "/" + directory + "/" + file + " --batch " + proxyvalue + " --level " + level + " --risk " + risk + " > " + os.path.dirname(os.path.realpath(__file__)) + "/" + directory + "/testresult" + "_" + file
         os.system(cmd)
         if 'is vulnerable' in open(directory + "/testresult" + "_" + file).read() or "Payload:" in open(
                 directory + "/testresult" + "_" + file).read():

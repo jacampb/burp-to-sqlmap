@@ -9,6 +9,7 @@ try:
     import argparse
     import sys
     import codecs
+    import zipfile
 
 except ImportError:
     print "[!] wrong installation detected (missing modules)."
@@ -42,16 +43,22 @@ def runsqlmap():
     return
 
 # Method to archive previous runs of the script if necessary
-def archivePreviousUnix(directory):
+def archivePrevious(directory):
     dircontents = os.listdir(directory)
     if dircontents:
         if not os.path.exists("Archives"):
             os.makedirs("Archives")
         print "Archiving previous data in output directory ..."
-        cmd = "tar -cvzf Archives/" + datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d_%H-%M-%S')  + "_" + directory[:-1] + ".tar.gz " + directory
-        os.system(cmd)
-        print "Done Archiving.\n"
-        cleanupcmd = "rm -r " + directory + " && mkdir " + directory
+        zf = zipfile.ZipFile("%s.zip" % (datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d_%H-%M-%S') + directory[:-1]), "w", zipfile.ZIP_DEFLATED)
+        abs_src = os.path.abspath(directory)
+        for dirname, subdirs, files in os.walk(directory):
+            for filename in files:
+                absname = os.path.abspath(os.path.join(dirname, filename))
+                arcname = absname[len(abs_src) + 1:]
+                print 'Archiving %s ...' % (os.path.join(dirname, filename))
+                zf.write(absname, arcname)
+        zf.close()
+        cleanupcmd = "rm -r " + directory + " && mkdir " + directory + " && mv *.zip Archives/"
         print "Cleaning up previous data ... "
         os.system(cleanupcmd)
         print "Done.\n"
@@ -108,6 +115,8 @@ def main():
         print "[+] Error: Unsupported OS Detected!"
 
 def runWindows(filename, directory, sqlmappath, proxyvalue, vulnerablefiles, level, risk):
+    # Call method to archive if necessary
+    archivePrevious(directory)
     packetnumber = 0
     print " [+] Exporting Packets ..."
     with open(filename, 'r') as f:
@@ -148,7 +157,7 @@ def runWindows(filename, directory, sqlmappath, proxyvalue, vulnerablefiles, lev
 
 def runLinux(filename, directory, sqlmappath, proxyvalue, vulnerablefiles, level, risk):
     # Call method to archive if necessary
-    archivePreviousUnix(directory)
+    archivePrevious(directory)
     
     packetnumber = 0
     print " [+] Exporting Packets ..."
@@ -177,7 +186,13 @@ def runLinux(filename, directory, sqlmappath, proxyvalue, vulnerablefiles, level
         cmd = "rm %s_ascii" % (os.path.dirname(os.path.realpath(__file__)) + "/" + directory + "/" + file)
         os.system(cmd)
         print "   [-] Performing SQL Injection on packet number " + file[:-4] + ". Please Wait ..."
-        cmd = "sqlmap -r " + os.path.dirname(os.path.realpath(__file__)) + "/" + directory + "/" + file + " --batch " + proxyvalue + " --level " + level + " --risk " + risk + " > " + os.path.dirname(os.path.realpath(__file__)) + "/" + directory + "/testresult" + "_" + file
+        # modified command to run Linux system with sqlmap installed and located at /usr/bin/sqlmap
+        try:
+            sqlmapInPath = open('/usr/bin/sqlmap') # This needs to be expanded to look in every directory in the user's path to search for sqlmap.
+            cmd = "sqlmap -r " + os.path.dirname(os.path.realpath(__file__)) + "/" + directory + "/" + file + " --batch " + proxyvalue + " --level " + level + " --risk " + risk + " > " + os.path.dirname(os.path.realpath(__file__)) + "/" + directory + "/testresult" + "_" + file
+        # Use original author's cmd if sqlmap is not located in user's path
+        except:
+            cmd = "python " + sqlmappath + "/sqlmap.py -r " + os.path.dirname(os.path.realpath(__file__)) + "/" + directory + "/" + file + " --batch " + proxyvalue + " --level " + level + " --risk " + risk + " > " + os.path.dirname(os.path.realpath(__file__)) + "/" + directory + "/testresult" + "_" + file
         os.system(cmd)
         if 'is vulnerable' in open(directory + "/testresult" + "_" + file).read() or "Payload:" in open(
                 directory + "/testresult" + "_" + file).read():

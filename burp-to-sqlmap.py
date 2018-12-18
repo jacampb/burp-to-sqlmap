@@ -1,5 +1,6 @@
 #!/usr/bin/python
 # This was added to allow a run from *nix command line. Not sure if this breaks windows usage.
+# This needs further testing
 try:
     import os
     import time
